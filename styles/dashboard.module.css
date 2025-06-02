@@ -1,0 +1,65 @@
+.card {
+  @apply rounded-lg bg-white p-6 shadow-sm;
+}
+
+.statCard {
+  @apply rounded-lg bg-white p-6 shadow-sm hover:shadow-md transition-shadow;
+}
+
+.pageTitle {
+  @apply text-2xl font-semibold text-gray-900;
+}
+
+.pageDescription {
+  @apply mt-1 text-sm text-gray-600;
+}
+
+.sectionTitle {
+  @apply text-base font-semibold text-gray-900;
+}
+
+.sectionDescription {
+  @apply mt-1 text-sm text-gray-600;
+}
+
+.container {
+  @apply p-6;
+}
+
+.header {
+  @apply mb-8;
+}
+
+.title {
+  @apply text-2xl font-bold;
+}
+
+.description {
+  @apply mt-2 text-gray-600;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+  gap: 1.5rem;
+}
+
+@media (min-width: 640px) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1024px) {
+  .grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.activityFeed {
+  @apply space-y-4 mt-4;
+}
+
+.activityItem {
+  @apply flex items-center gap-4 text-sm text-gray-600;
+} 

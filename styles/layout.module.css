@@ -1,0 +1,27 @@
+.sidebar {
+  @apply w-64 bg-white shadow-sm min-h-screen fixed left-0 top-0 z-20;
+}
+
+.mainContent {
+  @apply ml-64 min-h-screen bg-gray-50;
+}
+
+.topbar {
+  @apply bg-white shadow-sm fixed top-0 right-0 left-64 z-10;
+}
+
+.contentWrapper {
+  @apply pt-16 p-8;
+}
+
+.logo {
+  @apply text-xl font-bold text-blue-600 hover:text-blue-700 transition-colors;
+}
+
+.navItem {
+  @apply px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors flex items-center gap-2;
+}
+
+.navItemActive {
+  @apply bg-blue-50 text-blue-600;
+} 
