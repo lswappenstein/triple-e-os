@@ -1,5 +1,5 @@
 import './globals.css';
-import { AuthProvider } from '@/lib/context/auth-context';
+import { AuthProvider } from '@/lib/context/AuthContext';
 
 export const metadata = {
   title: 'Triple eOS',

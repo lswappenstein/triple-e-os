@@ -13,15 +13,15 @@ import {
   DocumentTextIcon,
   ClockIcon,
 } from '@heroicons/react/24/outline'
-import { useAuth } from '@/lib/context/auth-context'
+import { useAuth } from '@/lib/context/AuthContext'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import clsx from 'clsx'
+import { clsx } from 'clsx'
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: HomeIcon },
   { name: 'Health Check', href: '/dashboard/health-check', icon: ChartBarIcon },
-  { name: 'System Archetypes', href: '/dashboard/arquetipos', icon: MapIcon },
+  { name: 'System Archetypes', href: '/dashboard/archetypes', icon: MapIcon },
   { name: 'Quick Wins', href: '/dashboard/quick-wins', icon: LightBulbIcon },
   { name: 'Strategy Map', href: '/dashboard/strategy-map', icon: MapIcon },
   { name: 'Decisions', href: '/dashboard/decisions', icon: DocumentTextIcon },
@@ -36,6 +36,8 @@ export default function DashboardLayout({
 }) {
   const { user, signOut } = useAuth()
   const pathname = usePathname()
+
+  console.log('[DashboardLayout] user:', user);
 
   return (
     <div className="min-h-screen flex bg-gray-50">
@@ -62,21 +64,22 @@ export default function DashboardLayout({
           ))}
         </nav>
         <div className="border-t p-4">
+          {/* Always show sign out button for debugging */}
+          <button
+            onClick={() => signOut()}
+            className="block w-full px-4 py-2 text-left text-sm text-red-600 border rounded hover:bg-red-50"
+          >
+            Sign out
+          </button>
+          {/* Original menu for user email and sign out (can be restored after debug) */}
+          {/*
           <Menu as="div" className="relative">
             <Menu.Button className="flex items-center text-sm w-full">
               <span className="sr-only">Open user menu</span>
               <span className="truncate">{user?.email}</span>
             </Menu.Button>
-            <Transition
-              as={Fragment}
-              enter="transition ease-out duration-200"
-              enterFrom="transform opacity-0 scale-95"
-              enterTo="transform opacity-100 scale-100"
-              leave="transition ease-in duration-75"
-              leaveFrom="transform opacity-100 scale-100"
-              leaveTo="transform opacity-0 scale-95"
-            >
-              <Menu.Items className="absolute left-0 z-10 mt-2 w-48 origin-top-left rounded-md bg-white py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
+            <Transition ...>
+              <Menu.Items ...>
                 <Menu.Item>
                   {({ active }) => (
                     <button
@@ -93,6 +96,7 @@ export default function DashboardLayout({
               </Menu.Items>
             </Transition>
           </Menu>
+          */}
         </div>
       </aside>
       {/* Main content */}

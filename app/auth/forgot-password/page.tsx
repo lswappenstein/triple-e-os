@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { useAuth } from '@/lib/context/auth-context'
+import { useAuth } from '@/lib/context/AuthContext'
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('')

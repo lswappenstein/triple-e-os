@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { useAuth } from '@/lib/context/auth-context'
+import { useAuth } from '@/lib/context/AuthContext'
 import {
   Chart as ChartJS,
   RadialLinearScale,

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import { useAuth } from "@/lib/context/auth-context";
+import { useAuth } from "@/lib/context/AuthContext";
 
 export default function LearningCenterPage() {
   const { user } = useAuth();
