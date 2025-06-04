@@ -17,10 +17,11 @@ export default function LoginPage() {
   const router = useRouter()
 
   useEffect(() => {
-    // If user is already logged in, redirect to dashboard
-    if (user) {
-      router.push('/dashboard')
-    }
+    // TEMPORARILY DISABLED - may be causing redirect loop
+    // if (user) {
+    //   router.push('/dashboard')
+    // }
+    console.log('🔓 LoginPage: User state changed:', { hasUser: !!user, userEmail: user?.email });
   }, [user, router])
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -34,8 +35,10 @@ export default function LoginPage() {
       console.log('Attempting to sign in...')
       await signIn(email, password)
       console.log('Sign in successful')
-      router.push('/dashboard')
-      router.refresh() // Force a refresh of the page
+      
+      // Manual redirect after successful login
+      console.log('🔓 LoginPage: Manually redirecting to dashboard');
+      window.location.href = '/dashboard';
     } catch (err) {
       console.error('Login error:', err)
       setError('Invalid email or password')
@@ -92,11 +95,11 @@ export default function LoginPage() {
               {isLoading ? 'Signing in...' : 'Sign In'}
             </Button>
             <div className="text-center text-sm">
-              <Link href="/auth/signup" className="text-blue-600 hover:underline">
+              <Link href="/auth/register" className="text-blue-600 hover:underline">
                 Create an account
               </Link>
               {' • '}
-              <Link href="/auth/reset-password" className="text-blue-600 hover:underline">
+              <Link href="/auth/forgot-password" className="text-blue-600 hover:underline">
                 Forgot password?
               </Link>
             </div>

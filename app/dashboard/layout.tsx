@@ -1,6 +1,6 @@
 'use client'
 
-import { Fragment, useState } from 'react'
+import { Fragment, useState, useEffect } from 'react'
 import { Dialog, Menu, Transition } from '@headlessui/react'
 import {
   Bars3Icon,
@@ -39,11 +39,47 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode
 }) {
-  const { user, signOut } = useAuth()
+  const { user, signOut, loading } = useAuth()
   const pathname = usePathname()
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
-  console.log('[DashboardLayout] user:', user);
+  console.log('[DashboardLayout] Auth state:', { 
+    hasUser: !!user, 
+    userEmail: user?.email,
+    loading, 
+    pathname 
+  });
+
+  // Show loading spinner for a maximum of 3 seconds
+  const [maxLoadingReached, setMaxLoadingReached] = useState(false);
+  
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      console.log('[DashboardLayout] Max loading time reached, proceeding anyway');
+      setMaxLoadingReached(true);
+    }, 3000);
+    
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Show loading spinner while auth is being determined (with timeout)
+  if (loading && !maxLoadingReached) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading dashboard...</p>
+          <p className="mt-2 text-sm text-gray-500">Auth loading: {loading ? 'true' : 'false'}</p>
+        </div>
+      </div>
+    )
+  }
+
+  // If no user after loading completes, show a message but don't redirect
+  // (middleware will handle redirects if needed)
+  if (!loading && !user && maxLoadingReached) {
+    console.log('[DashboardLayout] No user found, but allowing dashboard to load');
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">

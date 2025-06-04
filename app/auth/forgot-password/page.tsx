@@ -3,6 +3,9 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useAuth } from '@/lib/context/AuthContext'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('')
@@ -28,66 +31,56 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <>
-      <div>
-        <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-          Reset your password
-        </h2>
-        <p className="mt-2 text-center text-sm text-gray-600">
-          Or{' '}
-          <Link
-            href="/auth/login"
-            className="font-medium text-blue-600 hover:text-blue-500"
-          >
-            return to sign in
-          </Link>
-        </p>
-      </div>
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <Card className="w-full max-w-md">
+        <CardHeader>
+          <CardTitle>Reset Password</CardTitle>
+          <CardDescription>
+            Enter your email address and we'll send you password reset instructions
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {error && (
+              <div className="text-red-500 text-sm bg-red-50 p-3 rounded-md">{error}</div>
+            )}
 
-      <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-        {error && (
-          <div className="rounded-md bg-red-50 p-4">
-            <div className="text-sm text-red-700">{error}</div>
-          </div>
-        )}
+            {success && (
+              <div className="text-green-700 text-sm bg-green-50 p-3 rounded-md">
+                If an account exists with that email, we have sent password reset instructions.
+              </div>
+            )}
 
-        {success && (
-          <div className="rounded-md bg-green-50 p-4">
-            <div className="text-sm text-green-700">
-              If an account exists with that email, we have sent password reset instructions.
+            <div className="space-y-2">
+              <label htmlFor="email" className="text-sm font-medium">
+                Email Address
+              </label>
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
+                required
+                placeholder="Enter your email address"
+              />
             </div>
-          </div>
-        )}
 
-        <div className="rounded-md shadow-sm">
-          <div>
-            <label htmlFor="email-address" className="sr-only">
-              Email address
-            </label>
-            <input
-              id="email-address"
-              name="email"
-              type="email"
-              autoComplete="email"
-              required
-              className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-              placeholder="Email address"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-          </div>
-        </div>
-
-        <div>
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
-          >
-            {isLoading ? 'Sending instructions...' : 'Send reset instructions'}
-          </button>
-        </div>
-      </form>
-    </>
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={isLoading}
+            >
+              {isLoading ? 'Sending instructions...' : 'Send Reset Instructions'}
+            </Button>
+            
+            <div className="text-center text-sm">
+              <Link href="/auth/login" className="text-blue-600 hover:underline">
+                Back to sign in
+              </Link>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
   )
 } 

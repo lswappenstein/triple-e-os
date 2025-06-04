@@ -1,10 +1,59 @@
 import { NextResponse } from 'next/server';
+
+export async function GET(request: Request) {
+  // TEMPORARY: Return mock data to stop the loading loop
+  // This will allow the dashboard to load while we fix the auth flow
+  
+  console.log('📊 Dashboard API: Returning mock data temporarily');
+  
+  const mockDashboard = {
+    tripleEStatus: {
+      efficiency: { score: 3.2, color: 'Yellow' },
+      effectiveness: { score: 2.8, color: 'Yellow' },
+      excellence: { score: 2.1, color: 'Red' },
+      currentPhase: 'Efficiency',
+      lastUpdated: new Date().toISOString()
+    },
+    strategicDecisions: null,
+    healthCheckSummary: null,
+    topArchetypes: [],
+    quickWinsProgress: {
+      total: 0,
+      completed: 0,
+      inProgress: 0,
+      notStarted: 0,
+      completionRate: 0,
+      recentCompletions: 0
+    },
+    strategyMapHighlights: [],
+    reviewLoopPulse: {
+      loopActive: false,
+      reflectionRate: 0,
+      newInsightsThisCycle: 0,
+      daysUntilReview: null,
+      currentCycle: null
+    },
+    recentActivity: [],
+    callToAction: {
+      type: 'health_check',
+      message: "Welcome! Start your transformation journey with a Health Check assessment.",
+      action: "Take Health Check",
+      url: "/dashboard/health-check"
+    }
+  };
+
+  return NextResponse.json({ dashboard: mockDashboard });
+}
+
+/* DISABLED - WILL RE-ENABLE AFTER AUTH IS FIXED
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 
 export async function GET(request: Request) {
   const cookieStore = cookies();
-  const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
+  const supabase = createRouteHandlerClient({ 
+    cookies: () => cookieStore 
+  });
   
   try {
     // Get user session
@@ -397,4 +446,5 @@ function getScoreColor(score: number): string {
   if (score >= 4) return 'Green';
   if (score >= 3) return 'Yellow';
   return 'Red';
-} 
+}
+*/ 
