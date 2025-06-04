@@ -105,7 +105,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { healthCheckResultId, responses } = await request.json();
+    // Parse request body but only extract what we need
+    await request.json();
 
     // Use the database function to detect archetypes
     const { data: detectedArchetypes, error: detectionError } = await supabase

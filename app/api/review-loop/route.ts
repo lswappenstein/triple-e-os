@@ -1,6 +1,37 @@
 import { NextResponse } from 'next/server';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
+import type { SupabaseClient } from '@supabase/supabase-js';
+
+// Define proper TypeScript interfaces
+interface CheckpointData {
+  title: string;
+  description?: string;
+  scheduled_date?: string;
+  status?: string;
+}
+
+interface InsightData {
+  title: string;
+  description?: string;
+  category?: string;
+  impact_level?: string;
+}
+
+interface FeedbackData {
+  content: string;
+  category?: string;
+  sentiment?: string;
+  source?: string;
+}
+
+interface CycleData {
+  title: string;
+  description?: string;
+  start_date?: string;
+  end_date?: string;
+  goals?: string[];
+}
 
 export async function GET(request: Request) {
   const supabase = createRouteHandlerClient({ cookies });
@@ -101,7 +132,7 @@ export async function PUT(request: Request) {
 }
 
 // Helper functions for review cycles
-async function getReviewCycles(supabase: any, userId: string) {
+async function getReviewCycles(supabase: SupabaseClient, userId: string) {
   const { data, error } = await supabase
     .from('review_cycles')
     .select('*')
@@ -112,7 +143,7 @@ async function getReviewCycles(supabase: any, userId: string) {
   return NextResponse.json({ cycles: data });
 }
 
-async function createReviewCycle(supabase: any, userId: string, data: any) {
+async function createReviewCycle(supabase: SupabaseClient, userId: string, data: CycleData) {
   const { data: cycle, error } = await supabase
     .from('review_cycles')
     .insert({
@@ -126,7 +157,7 @@ async function createReviewCycle(supabase: any, userId: string, data: any) {
   return NextResponse.json({ cycle });
 }
 
-async function updateReviewCycle(supabase: any, userId: string, id: string, data: any) {
+async function updateReviewCycle(supabase: SupabaseClient, userId: string, id: string, data: CycleData) {
   const { data: cycle, error } = await supabase
     .from('review_cycles')
     .update(data)
@@ -140,7 +171,7 @@ async function updateReviewCycle(supabase: any, userId: string, id: string, data
 }
 
 // Helper functions for feedback entries
-async function getFeedbackEntries(supabase: any, userId: string, searchParams: URLSearchParams) {
+async function getFeedbackEntries(supabase: SupabaseClient, userId: string, searchParams: URLSearchParams) {
   let query = supabase
     .from('feedback_entries')
     .select('*')
@@ -162,7 +193,7 @@ async function getFeedbackEntries(supabase: any, userId: string, searchParams: U
   return NextResponse.json({ feedback: data });
 }
 
-async function createFeedbackEntry(supabase: any, userId: string, data: any) {
+async function createFeedbackEntry(supabase: SupabaseClient, userId: string, data: FeedbackData) {
   const { data: feedback, error } = await supabase
     .from('feedback_entries')
     .insert({
@@ -176,7 +207,7 @@ async function createFeedbackEntry(supabase: any, userId: string, data: any) {
   return NextResponse.json({ feedback });
 }
 
-async function updateFeedbackEntry(supabase: any, userId: string, id: string, data: any) {
+async function updateFeedbackEntry(supabase: SupabaseClient, userId: string, id: string, data: FeedbackData) {
   const { data: feedback, error } = await supabase
     .from('feedback_entries')
     .update(data)
@@ -190,7 +221,7 @@ async function updateFeedbackEntry(supabase: any, userId: string, id: string, da
 }
 
 // Helper functions for learning insights
-async function getLearningInsights(supabase: any, userId: string, searchParams: URLSearchParams) {
+async function getLearningInsights(supabase: SupabaseClient, userId: string, searchParams: URLSearchParams) {
   let query = supabase
     .from('learning_insights')
     .select('*')
@@ -212,7 +243,7 @@ async function getLearningInsights(supabase: any, userId: string, searchParams: 
   return NextResponse.json({ insights: data });
 }
 
-async function createLearningInsight(supabase: any, userId: string, data: any) {
+async function createLearningInsight(supabase: SupabaseClient, userId: string, data: InsightData) {
   const { data: insight, error } = await supabase
     .from('learning_insights')
     .insert({
@@ -226,7 +257,7 @@ async function createLearningInsight(supabase: any, userId: string, data: any) {
   return NextResponse.json({ insight });
 }
 
-async function updateLearningInsight(supabase: any, userId: string, id: string, data: any) {
+async function updateLearningInsight(supabase: SupabaseClient, userId: string, id: string, data: InsightData) {
   const { data: insight, error } = await supabase
     .from('learning_insights')
     .update(data)
@@ -240,7 +271,7 @@ async function updateLearningInsight(supabase: any, userId: string, id: string, 
 }
 
 // Helper functions for system checkpoints
-async function getSystemCheckpoints(supabase: any, userId: string, searchParams: URLSearchParams) {
+async function getSystemCheckpoints(supabase: SupabaseClient, userId: string, searchParams: URLSearchParams) {
   let query = supabase
     .from('system_checkpoints')
     .select('*')
@@ -262,7 +293,7 @@ async function getSystemCheckpoints(supabase: any, userId: string, searchParams:
   return NextResponse.json({ checkpoints: data });
 }
 
-async function createSystemCheckpoint(supabase: any, userId: string, data: any) {
+async function createSystemCheckpoint(supabase: SupabaseClient, userId: string, data: CheckpointData) {
   const { data: checkpoint, error } = await supabase
     .from('system_checkpoints')
     .insert({
@@ -276,7 +307,7 @@ async function createSystemCheckpoint(supabase: any, userId: string, data: any) 
   return NextResponse.json({ checkpoint });
 }
 
-async function updateSystemCheckpoint(supabase: any, userId: string, id: string, data: any) {
+async function updateSystemCheckpoint(supabase: SupabaseClient, userId: string, id: string, data: CheckpointData) {
   const { data: checkpoint, error } = await supabase
     .from('system_checkpoints')
     .update(data)
@@ -290,7 +321,7 @@ async function updateSystemCheckpoint(supabase: any, userId: string, id: string,
 }
 
 // Helper function for dashboard data
-async function getDashboardData(supabase: any, userId: string) {
+async function getDashboardData(supabase: SupabaseClient, userId: string) {
   // Get current active cycle
   const { data: activeCycle } = await supabase
     .from('review_cycles')

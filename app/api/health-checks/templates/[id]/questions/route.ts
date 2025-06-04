@@ -4,15 +4,16 @@ import { createClient } from '@/lib/supabase/server'
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return errorResponse('Unauthorized', 401)
 
     const healthCheckService = await createHealthCheckService()
-    const questions = await healthCheckService.getQuestions(params.id)
+    const questions = await healthCheckService.getQuestions(id)
     return successResponse(questions)
   } catch (error) {
     console.error('Error fetching questions:', error)
@@ -22,9 +23,10 @@ export async function GET(
 
 export async function POST(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return errorResponse('Unauthorized', 401)
@@ -38,7 +40,7 @@ export async function POST(
     const healthCheckService = await createHealthCheckService()
     const question = await healthCheckService.createQuestion({
       ...body,
-      template_id: params.id,
+      template_id: id,
     })
 
     return successResponse(question, 'Question created successfully')

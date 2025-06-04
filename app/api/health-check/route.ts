@@ -3,6 +3,12 @@ import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import type { Database } from '@/types/supabase';
 
+interface HealthCheckResponse {
+  questionId: number;
+  score: number;
+  dimension: string;
+}
+
 export async function GET() {
   console.log('Health Check API: GET request received');
   
@@ -101,7 +107,7 @@ export async function POST(request: Request) {
   }
 }
 
-function calculateDimensionScore(responses: any[], dimension: string): number {
+function calculateDimensionScore(responses: HealthCheckResponse[], dimension: string): number {
   const dimensionResponses = responses.filter(r => r.dimension === dimension);
   if (dimensionResponses.length === 0) return 0;
   

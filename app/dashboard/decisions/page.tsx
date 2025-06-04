@@ -1,10 +1,8 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
@@ -50,10 +48,33 @@ interface ValidatedHypothesis {
   priority_level: string;
 }
 
+interface Hypothesis {
+  id: string;
+  challenge_area: string;
+  hypothesis: string;
+  status: string;
+  priority_level: string;
+}
+
+interface Archetype {
+  id: string;
+  archetype_name: string;
+  source_dimension: string;
+  insight: string;
+}
+
+interface QuickWin {
+  id: string;
+  title: string;
+  description: string;
+  status: string;
+  impact_level: string;
+}
+
 interface ContextData {
-  hypotheses: any[];
-  archetypes: any[];
-  quickWins: any[];
+  hypotheses: Hypothesis[];
+  archetypes: Archetype[];
+  quickWins: QuickWin[];
 }
 
 export default function DecisionsPage() {

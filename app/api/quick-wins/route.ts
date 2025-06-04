@@ -11,6 +11,13 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Unauthorized', logs }, { status: 401 });
   }
 
+  // Parse any request body data if needed
+  try {
+    await req.json();
+  } catch {
+    // No body or invalid JSON, continue with generation
+  }
+
   // Fetch latest health check results (per dimension)
   const { data: results, error: resultsError } = await supabase
     .from('health_check_results')
@@ -122,4 +129,25 @@ export async function POST(req: Request) {
 
   logs.push('Quick wins inserted successfully.');
   return NextResponse.json({ success: true, quickWins, logs });
+}
+
+export async function GET() {
+  const supabase = createRouteHandlerClient({ cookies });
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const { data: quickWins, error } = await supabase
+    .from('quick_wins')
+    .select('*')
+    .eq('user_id', user.id)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json({ quickWins: quickWins || [] });
 } 

@@ -1,20 +1,12 @@
-const getEnvVariable = (key: string): string => {
-  if (typeof window !== 'undefined') {
-    // Client-side
-    return process.env[key] || ''
-  }
-  // Server-side
-  const value = process.env[key]
-  if (!value) {
-    throw new Error(`Missing environment variable: ${key}`)
-  }
-  return value
-}
-
+// Environment variable validation
 export const env = {
   supabase: {
-    url: process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-    anonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
+    url: process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    anonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  },
+  nextAuth: {
+    secret: process.env.NEXTAUTH_SECRET!,
+    url: process.env.NEXTAUTH_URL!,
   },
   app: {
     url: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
@@ -30,17 +22,15 @@ export const env = {
   },
 } as const
 
-export const validateEnv = () => {
-  if (typeof window !== 'undefined') return // Skip validation on client-side
-
-  const requiredEnvVars = [
+export function validateEnv() {
+  const required = [
     'NEXT_PUBLIC_SUPABASE_URL',
     'NEXT_PUBLIC_SUPABASE_ANON_KEY',
   ]
 
-  const missingEnvVars = requiredEnvVars.filter(key => !process.env[key])
-
-  if (missingEnvVars.length > 0) {
-    throw new Error(`Missing required environment variables: ${missingEnvVars.join(', ')}`)
+  for (const key of required) {
+    if (!process.env[key]) {
+      throw new Error(`Missing required environment variable: ${key}`)
+    }
   }
 } 

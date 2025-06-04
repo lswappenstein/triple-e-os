@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-export async function GET(request: Request) {
+export async function GET() {
   // TEMPORARY: Return mock data to stop the loading loop
   // This will allow the dashboard to load while we fix the auth flow
   

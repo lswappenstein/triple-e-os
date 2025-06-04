@@ -1,13 +1,11 @@
 "use client";
 
-import { useEffect, useState } from 'react';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { InfoIcon, AlertTriangleIcon } from 'lucide-react';
-import { useAuth } from '@/lib/context/AuthContext';
+import { useState, useEffect } from 'react'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { InfoIcon, AlertTriangleIcon } from 'lucide-react'
 
 interface Archetype {
   id: string;
@@ -18,7 +16,6 @@ interface Archetype {
 }
 
 export default function ArchetypesPage() {
-  const { user, loading: authLoading } = useAuth();
   const [archetypes, setArchetypes] = useState<Archetype[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
