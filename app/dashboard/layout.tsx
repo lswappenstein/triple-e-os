@@ -19,7 +19,7 @@ import {
 } from '@heroicons/react/24/outline'
 import { useAuth } from '@/lib/context/AuthContext'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { clsx } from 'clsx'
 
 const navigation = [
@@ -41,6 +41,7 @@ export default function DashboardLayout({
 }) {
   const { user, signOut, loading } = useAuth()
   const pathname = usePathname()
+  const router = useRouter()
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   console.log('[DashboardLayout] Auth state:', { 
@@ -62,6 +63,15 @@ export default function DashboardLayout({
     return () => clearTimeout(timer);
   }, []);
 
+  // Redirect unauthenticated users after loading completes
+  useEffect(() => {
+    if (!loading && !user && maxLoadingReached) {
+      console.log('[DashboardLayout] No user found after loading, redirecting to login');
+      router.push('/auth/login');
+      return;
+    }
+  }, [loading, user, maxLoadingReached, router]);
+
   // Show loading spinner while auth is being determined (with timeout)
   if (loading && !maxLoadingReached) {
     return (
@@ -75,10 +85,16 @@ export default function DashboardLayout({
     )
   }
 
-  // If no user after loading completes, show a message but don't redirect
-  // (middleware will handle redirects if needed)
+  // If no user after loading completes, show loading state while redirect happens
   if (!loading && !user && maxLoadingReached) {
-    console.log('[DashboardLayout] No user found, but allowing dashboard to load');
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Redirecting to login...</p>
+        </div>
+      </div>
+    )
   }
 
   return (

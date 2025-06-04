@@ -3,10 +3,54 @@ import { cookies } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
 // import { Database } from '@/lib/database.types'; // Commented out due to missing module
 
-type AnyArchetype = any;
-type AnyRule = any;
-type AnyCondition = any;
-type AnyResponse = any;
+// Proper TypeScript interfaces instead of any types
+interface DetectedArchetype {
+  archetype_name: string;
+  source_dimension: 'Efficiency' | 'Effectiveness' | 'Excellence';
+  insight: string;
+}
+
+interface ArchetypeInsert {
+  user_id: string;
+  archetype_name: string;
+  source_dimension: string;
+  insight: string;
+}
+
+interface QuickWinInsert {
+  user_id: string;
+  title: string;
+  description: string;
+  source: 'system' | 'user';
+  archetype: string;
+  dimension: string;
+  impact_level: 'Low' | 'Medium' | 'High';
+  status: 'To Do' | 'In Progress' | 'Done';
+}
+
+interface UserArchetype {
+  id: string;
+  user_id: string;
+  archetype_name: string;
+  source_dimension: string;
+  insight: string;
+  created_at: string;
+}
+
+interface UserQuickWin {
+  id: string;
+  user_id: string;
+  title: string;
+  description?: string;
+  source: string;
+  archetype?: string;
+  dimension: string;
+  impact_level?: string;
+  status: string;
+  notes?: string;
+  created_at: string;
+  last_updated: string;
+}
 
 export async function GET() {
   try {
@@ -42,8 +86,8 @@ export async function GET() {
     }
 
     return NextResponse.json({
-      archetypes: archetypes || [],
-      quickWins: quickWins || [],
+      archetypes: (archetypes as UserArchetype[]) || [],
+      quickWins: (quickWins as UserQuickWin[]) || [],
     });
 
   } catch (error) {
@@ -72,9 +116,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to detect archetypes' }, { status: 500 });
     }
 
-    // Save detected archetypes to the user's archetypes table
-    if (detectedArchetypes && detectedArchetypes.length > 0) {
-      const archetypeInserts = detectedArchetypes.map((archetype: any) => ({
+    // Type guard and save detected archetypes to the user's archetypes table
+    const typedArchetypes = detectedArchetypes as DetectedArchetype[] | null;
+    if (typedArchetypes && Array.isArray(typedArchetypes) && typedArchetypes.length > 0) {
+      const archetypeInserts: ArchetypeInsert[] = typedArchetypes.map((archetype: DetectedArchetype) => ({
         user_id: user.id,
         archetype_name: archetype.archetype_name,
         source_dimension: archetype.source_dimension,
@@ -98,15 +143,15 @@ export async function POST(request: NextRequest) {
       }
 
       // Generate system quick wins for detected archetypes
-      const quickWinInserts = detectedArchetypes.map((archetype: any) => ({
+      const quickWinInserts: QuickWinInsert[] = typedArchetypes.map((archetype: DetectedArchetype) => ({
         user_id: user.id,
         title: `Address ${archetype.archetype_name}`,
         description: `Focus on improving ${archetype.source_dimension.toLowerCase()} to address the ${archetype.archetype_name} pattern.`,
-        source: 'system',
+        source: 'system' as const,
         archetype: archetype.archetype_name,
         dimension: archetype.source_dimension,
-        impact_level: 'High',
-        status: 'To Do',
+        impact_level: 'High' as const,
+        status: 'To Do' as const,
       }));
 
       // Clear existing system quick wins for this user
@@ -129,9 +174,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      archetypes: detectedArchetypes || [],
-      message: detectedArchetypes?.length > 0 
-        ? `Detected ${detectedArchetypes.length} archetype(s)` 
+      archetypes: typedArchetypes || [],
+      message: (typedArchetypes && typedArchetypes.length > 0)
+        ? `Detected ${typedArchetypes.length} archetype(s)` 
         : 'No archetypes detected'
     });
 

@@ -4,16 +4,6 @@ import { NextResponse, type NextRequest } from 'next/server'
 export async function middleware(request: NextRequest) {
   console.log('🛡️ Middleware: Processing request for:', request.nextUrl.pathname);
   
-  // TEMPORARY: Bypass auth to stop redirect loop
-  console.log('🛡️ Middleware: TEMPORARILY BYPASSING AUTH - allowing all requests');
-  return NextResponse.next({
-    request: {
-      headers: request.headers,
-    },
-  });
-
-  // Comment out the auth logic temporarily
-  /*
   let response = NextResponse.next({
     request: {
       headers: request.headers,
@@ -47,11 +37,14 @@ export async function middleware(request: NextRequest) {
   )
 
   try {
+    // Get session directly without retry to avoid interference
     const { data: { session }, error } = await supabase.auth.getSession()
+    
     console.log('🛡️ Middleware: Session check result:', { 
       hasSession: !!session, 
       userId: session?.user?.id, 
-      error: error?.message 
+      error: error?.message,
+      path: request.nextUrl.pathname
     });
 
     // If there's no session and the user is trying to access a protected route
@@ -65,17 +58,22 @@ export async function middleware(request: NextRequest) {
     // If there's a session and the user is on the login/register page, redirect to dashboard
     if (session && (request.nextUrl.pathname.startsWith('/auth/login') || request.nextUrl.pathname.startsWith('/auth/register'))) {
       console.log('🛡️ Middleware: Has session, redirecting to dashboard');
-      const redirectUrl = new URL('/dashboard', request.url)
+      
+      // Check if there's a redirectTo parameter
+      const redirectTo = request.nextUrl.searchParams.get('redirectTo')
+      const targetUrl = redirectTo && redirectTo.startsWith('/') ? redirectTo : '/dashboard'
+      
+      const redirectUrl = new URL(targetUrl, request.url)
       return NextResponse.redirect(redirectUrl)
     }
   } catch (err) {
     console.error('🛡️ Middleware: Error checking session:', err);
     // On error, allow the request to proceed rather than redirecting
+    // This prevents infinite loops when there are authentication issues
   }
 
   console.log('🛡️ Middleware: Allowing request to proceed');
   return response
-  */
 }
 
 export const config = {
@@ -86,7 +84,8 @@ export const config = {
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
      * - public folder
+     * - api routes (handled separately)
      */
-    '/((?!_next/static|_next/image|favicon.ico|public).*)',
+    '/((?!_next/static|_next/image|favicon.ico|public|api).*)',
   ],
 } 
