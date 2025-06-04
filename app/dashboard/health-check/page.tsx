@@ -5,11 +5,9 @@ import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Slider } from "@/components/ui/slider";
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { 
   CheckCircleIcon, 
@@ -24,6 +22,7 @@ import {
   TrendingUpIcon,
   AwardIcon
 } from "lucide-react";
+import HealthCheckSlider from "@/components/health-check/HealthCheckSlider";
 
 interface Question {
   id: number;
@@ -75,19 +74,10 @@ const questions: Question[] = [
   { id: 20, dimension: 'Excellence', category: 'Benchmarking', text: 'We benchmark against industry best practices.', tooltip: 'Benchmarking.' },
 ];
 
-const SCALE_LABELS = [
-  { value: 1, label: "Strongly Disagree", color: "bg-red-100 text-red-800 hover:bg-red-200", description: "This rarely or never happens in our organization" },
-  { value: 2, label: "Disagree", color: "bg-orange-100 text-orange-800 hover:bg-orange-200", description: "This happens occasionally but not consistently" },
-  { value: 3, label: "Neutral", color: "bg-yellow-100 text-yellow-800 hover:bg-yellow-200", description: "This happens sometimes, with mixed results" },
-  { value: 4, label: "Agree", color: "bg-blue-100 text-blue-800 hover:bg-blue-200", description: "This happens frequently and works well" },
-  { value: 5, label: "Strongly Agree", color: "bg-green-100 text-green-800 hover:bg-green-200", description: "This consistently happens and is a strength" }
-];
-
 export default function HealthCheckPage() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showTooltip, setShowTooltip] = useState<number | null>(null);
 
   const [state, setState] = useState<AssessmentState>({
     mode: 'intro',
@@ -682,110 +672,12 @@ export default function HealthCheckPage() {
                 <p className="text-sm text-gray-500 mt-2">{currentQuestion.tooltip}</p>
               </div>
 
-              {/* Rating Scale */}
-              <div className="space-y-6">
-                <Label className="text-base font-medium">How much do you agree with this statement?</Label>
-                
-                {/* Slider Interface */}
-                <div className="space-y-4">
-                  <div className="px-2">
-                    <Slider
-                      value={[currentResponse.score || 1]}
-                      onValueChange={(value) => handleScoreChange(value[0])}
-                      max={5}
-                      min={1}
-                      step={1}
-                      className="w-full"
-                    />
-                  </div>
-                  
-                  {/* Scale Labels */}
-                  <div className="flex justify-between text-xs text-gray-500 px-2">
-                    {SCALE_LABELS.map((label) => (
-                      <div key={label.value} className="text-center">
-                        <div className="font-medium">{label.value}</div>
-                      </div>
-                    ))}
-                  </div>
-                  
-                  {/* Current Selection Display */}
-                  {currentResponse.score > 0 && (
-                    <div className="mt-4 p-4 rounded-lg border-2 border-blue-200 bg-blue-50">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center space-x-2">
-                          <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold">
-                            {currentResponse.score}
-                          </div>
-                          <span className="font-semibold text-blue-900">
-                            {SCALE_LABELS.find(s => s.value === currentResponse.score)?.label}
-                          </span>
-                        </div>
-                      </div>
-                      <p className="text-sm text-blue-800">
-                        {SCALE_LABELS.find(s => s.value === currentResponse.score)?.description}
-                      </p>
-                    </div>
-                  )}
-                  
-                  {/* Quick Selection Buttons */}
-                  <div className="grid grid-cols-5 gap-2 mt-4">
-                    {SCALE_LABELS.map((option) => (
-                      <Button
-                        key={option.value}
-                        variant={currentResponse.score === option.value ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => handleScoreChange(option.value)}
-                        className={`text-xs py-2 transition-all ${
-                          currentResponse.score === option.value 
-                            ? 'bg-blue-600 hover:bg-blue-700' 
-                            : 'hover:border-blue-300'
-                        }`}
-                      >
-                        <div className="text-center">
-                          <div className="font-bold">{option.value}</div>
-                          <div className="text-[10px] leading-tight">{option.label.split(' ')[0]}</div>
-                        </div>
-                      </Button>
-                    ))}
-                  </div>
-                  
-                  {/* Scale Guide */}
-                  <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-                    <div className="text-xs text-gray-600 space-y-1">
-                      <div className="font-medium mb-2">Rating Guide:</div>
-                      <div className="grid gap-1">
-                        <div className="flex justify-between">
-                          <span className="text-red-600">1-2: Needs Improvement</span>
-                          <span className="text-gray-500">Rarely happens or inconsistent</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-yellow-600">3: Neutral/Mixed</span>
-                          <span className="text-gray-500">Sometimes happens, mixed results</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-green-600">4-5: Strength</span>
-                          <span className="text-gray-500">Frequently or consistently happens</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Comments */}
-              <div className="space-y-2">
-                <Label htmlFor="comment" className="text-base font-medium">
-                  Additional Context <span className="text-sm font-normal text-gray-500">(Optional)</span>
-                </Label>
-                <Textarea
-                  id="comment"
-                  value={currentResponse.comment}
-                  onChange={(e) => handleCommentChange(e.target.value)}
-                  placeholder="Share specific examples, challenges, or context that might help explain your rating..."
-                  className="min-h-[80px] resize-none"
-                  rows={3}
-                />
-              </div>
+              {/* New Clean Slider Interface */}
+              <HealthCheckSlider
+                currentResponse={currentResponse}
+                onScoreChange={handleScoreChange}
+                onCommentChange={handleCommentChange}
+              />
             </div>
           </CardContent>
         </Card>
