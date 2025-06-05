@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from '@/lib/supabase/client';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
@@ -74,7 +74,7 @@ export default function QuickWinsPage() {
   const createQuickWin = async () => {
     try {
       setIsCreating(true);
-      const supabase = createClientComponentClient();
+      const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
       
       if (!user) throw new Error('Not authenticated');
@@ -114,20 +114,24 @@ export default function QuickWinsPage() {
 
   const updateQuickWinStatus = async (quickWinId: string, newStatus: string) => {
     try {
-      const supabase = createClientComponentClient();
+      console.log('🔄 Updating quick win status:', { quickWinId, newStatus });
+      const supabase = createClient();
       const { error } = await supabase
         .from('quick_wins')
         .update({ status: newStatus, last_updated: new Date().toISOString() })
         .eq('id', quickWinId);
 
+      console.log('🔄 Update result:', { error });
+
       if (error) throw error;
 
+      console.log('✅ Status update successful, updating local state');
       // Update local state
       setQuickWins(prev => prev.map(qw => 
         qw.id === quickWinId ? { ...qw, status: newStatus, last_updated: new Date().toISOString() } : qw
       ));
     } catch (err) {
-      console.error('Error updating quick win status:', err);
+      console.error('❌ Error updating quick win status:', err);
       setError(err instanceof Error ? err.message : 'Failed to update status');
     }
   };
@@ -136,7 +140,7 @@ export default function QuickWinsPage() {
     if (!confirm('Are you sure you want to delete this quick win?')) return;
 
     try {
-      const supabase = createClientComponentClient();
+      const supabase = createClient();
       const { error } = await supabase
         .from('quick_wins')
         .delete()

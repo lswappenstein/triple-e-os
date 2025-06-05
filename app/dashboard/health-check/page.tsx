@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from '@/lib/supabase/client';
 import { 
   CheckCircleIcon, 
   ArrowLeftIcon, 
@@ -46,66 +46,100 @@ interface AssessmentState {
   lastSaved: Date | null;
 }
 
-const questions: Question[] = [
-  // Efficiency Questions (7 questions)
-  { id: 1, dimension: 'Efficiency', category: 'Process', text: 'Our processes are clearly documented and easy to follow.', tooltip: 'Documentation and clarity of processes.' },
-  { id: 2, dimension: 'Efficiency', category: 'Process', text: 'We regularly review and optimize our workflows.', tooltip: 'Continuous improvement of workflows.' },
-  { id: 3, dimension: 'Efficiency', category: 'Process', text: 'We use automation to reduce manual work.', tooltip: 'Automation and technology use.' },
-  { id: 4, dimension: 'Efficiency', category: 'Resource', text: 'Resources are allocated efficiently.', tooltip: 'Resource allocation.' },
-  { id: 5, dimension: 'Efficiency', category: 'Bottleneck', text: 'Bottlenecks are quickly identified and resolved.', tooltip: 'Bottleneck management.' },
-  { id: 6, dimension: 'Efficiency', category: 'Lean', text: 'We minimize waste and unnecessary steps.', tooltip: 'Lean practices.' },
-  { id: 7, dimension: 'Efficiency', category: 'Risk', text: 'We have contingency plans for key risks.', tooltip: 'Risk management.' },
-  
-  // Effectiveness Questions (7 questions)
-  { id: 8, dimension: 'Effectiveness', category: 'Goals', text: 'Our team consistently achieves its goals.', tooltip: 'Goal achievement.' },
-  { id: 9, dimension: 'Effectiveness', category: 'Metrics', text: 'We have clear metrics to measure success.', tooltip: 'Success metrics.' },
-  { id: 10, dimension: 'Effectiveness', category: 'Decision Making', text: 'Decision-making is data-driven and timely.', tooltip: 'Decision-making process.' },
-  { id: 11, dimension: 'Effectiveness', category: 'Adaptability', text: 'We adapt quickly to changes in the market.', tooltip: 'Adaptability.' },
-  { id: 12, dimension: 'Effectiveness', category: 'Roles', text: 'Roles and responsibilities are well defined.', tooltip: 'Role clarity.' },
-  { id: 13, dimension: 'Effectiveness', category: 'Communication', text: 'Communication is clear and effective.', tooltip: 'Communication quality.' },
-  { id: 14, dimension: 'Effectiveness', category: 'Strategy', text: 'Our strategy is well understood by all.', tooltip: 'Strategic alignment.' },
-  
-  // Excellence Questions (6 questions)
-  { id: 15, dimension: 'Excellence', category: 'Innovation', text: 'We encourage innovation and new ideas.', tooltip: 'Culture of innovation.' },
-  { id: 16, dimension: 'Excellence', category: 'Feedback', text: 'Feedback is regularly collected and acted upon.', tooltip: 'Feedback mechanisms.' },
-  { id: 17, dimension: 'Excellence', category: 'Learning', text: 'We invest in professional development.', tooltip: 'Learning and growth.' },
-  { id: 18, dimension: 'Excellence', category: 'Quality', text: 'Quality standards are consistently met.', tooltip: 'Quality assurance.' },
-  { id: 19, dimension: 'Excellence', category: 'Recognition', text: 'We celebrate achievements and recognize contributions.', tooltip: 'Recognition and celebration.' },
-  { id: 20, dimension: 'Excellence', category: 'Benchmarking', text: 'We benchmark against industry best practices.', tooltip: 'Benchmarking.' },
-];
+const questions: Question[] = []; // Will be populated from database
 
 export default function HealthCheckPage() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [questionsLoaded, setQuestionsLoaded] = useState(false);
+  const [questionsData, setQuestionsData] = useState<Question[]>([]);
 
   const [state, setState] = useState<AssessmentState>({
     mode: 'intro',
     currentQuestionIndex: 0,
-    responses: Array(questions.length).fill(null).map(() => ({ 
-      score: 0, 
-      comment: "", 
-      answered: false 
-    })),
+    responses: [],
     startTime: null,
     lastSaved: null
   });
 
+  // Load questions from database
+  useEffect(() => {
+    const loadQuestions = async () => {
+      try {
+        console.log('🔍 Starting to load questions...');
+        
+        // Debug: Log Supabase configuration
+        console.log('🔧 Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL);
+        console.log('🔧 Supabase Key (first 20 chars):', process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.substring(0, 20) + '...');
+        
+        // Test authentication first
+        const { data: { user }, error: authError } = await createClient().auth.getUser();
+        console.log('👤 Current user:', { id: user?.id, email: user?.email, authError });
+        
+        const { data: dbQuestions, error } = await createClient()
+          .from('health_check_questions')
+          .select('id, dimension, category, text, tooltip')
+          .order('id');
+        
+        console.log('📊 Database response:', { data: dbQuestions, error });
+        
+        if (error) {
+          console.error('❌ Database error:', error);
+          throw error;
+        }
+        
+        if (dbQuestions && dbQuestions.length > 0) {
+          console.log('✅ Questions loaded successfully:', dbQuestions.length);
+          setQuestionsData(dbQuestions);
+          setState(prev => ({
+            ...prev,
+            responses: Array(dbQuestions.length).fill(null).map(() => ({ 
+              score: 0, 
+              comment: "", 
+              answered: false 
+            }))
+          }));
+        } else {
+          console.warn('⚠️ No questions returned from database');
+          setError('No health check questions found in the database.');
+        }
+      } catch (error) {
+        console.error('💥 Error loading questions:', error);
+        console.error('💥 Error details:', JSON.stringify(error, null, 2));
+        
+        // Type-safe error handling
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        const errorCode = error && typeof error === 'object' && 'code' in error ? error.code : 'unknown';
+        
+        console.error('💥 Error message:', errorMessage);
+        console.error('💥 Error code:', errorCode);
+        setError(`Failed to load health check questions: ${errorMessage}`);
+      } finally {
+        setQuestionsLoaded(true);
+      }
+    };
+
+    loadQuestions();
+  }, []);
+
   // Auto-save functionality
   useEffect(() => {
-    if (state.mode === 'assessment' && state.startTime) {
+    if (state.mode === 'assessment' && state.startTime && questionsData.length > 0) {
       const autoSave = setInterval(() => {
         saveProgress();
       }, 30000); // Auto-save every 30 seconds
 
       return () => clearInterval(autoSave);
     }
-  }, [state.mode, state.startTime]);
+  }, [state.mode, state.startTime, questionsData.length]);
 
   // Load saved progress on mount
   useEffect(() => {
-    loadSavedProgress();
-  }, []);
+    if (questionsLoaded && questionsData.length > 0) {
+      loadSavedProgress();
+    }
+  }, [questionsLoaded, questionsData.length]);
 
   const saveProgress = () => {
     try {
@@ -129,7 +163,7 @@ export default function HealthCheckPage() {
         const progressData = JSON.parse(saved);
         const answeredCount = progressData.responses.filter((r: AssessmentResponse) => r.answered).length;
         
-        if (answeredCount > 0) {
+        if (answeredCount > 0 && progressData.responses.length === questionsData.length) {
           setState(prev => ({
             ...prev,
             responses: progressData.responses,
@@ -187,7 +221,7 @@ export default function HealthCheckPage() {
   };
 
   const handleNext = () => {
-    if (state.currentQuestionIndex < questions.length - 1) {
+    if (state.currentQuestionIndex < questionsData.length - 1) {
       setState(prev => ({
         ...prev,
         currentQuestionIndex: prev.currentQuestionIndex + 1
@@ -228,36 +262,23 @@ export default function HealthCheckPage() {
     }
 
     try {
-      const supabase = createClientComponentClient();
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user } } = await createClient().auth.getUser();
       if (!user) throw new Error('No user found');
 
-      // Get database questions
-      const { data: dbQuestions, error: questionsError } = await supabase
-        .from('health_check_questions')
-        .select('id, dimension, category, text')
-        .order('id');
-      
-      if (questionsError) throw questionsError;
-      if (!dbQuestions || dbQuestions.length === 0) throw new Error('No questions found in database');
+      // Use the loaded questions data
+      if (questionsData.length === 0) throw new Error('No questions loaded');
 
-      const questionMap = new Map(dbQuestions.map(q => [q.text, q]));
-
-      // Save responses
-      const { data: responseRows, error: responseError } = await supabase
+      // Save responses using the database question IDs
+      const { data: responseRows, error: responseError } = await createClient()
         .from('health_check_responses')
         .insert(
-          questions.map((q, i) => {
-            const dbQuestion = questionMap.get(q.text);
-            if (!dbQuestion) throw new Error(`Question not found in database: ${q.text}`);
-            return {
-              user_id: user.id,
-              question_id: dbQuestion.id,
-              dimension: q.dimension,
-              response_value: state.responses[i].score,
-              comment: state.responses[i].comment,
-            };
-          })
+          questionsData.map((q, i) => ({
+            user_id: user.id,
+            question_id: q.id,
+            dimension: q.dimension,
+            response_value: state.responses[i].score,
+            comment: state.responses[i].comment,
+          }))
         )
         .select();
 
@@ -270,7 +291,7 @@ export default function HealthCheckPage() {
           const dimensionScore = calculateDimensionScore(state.responses, dimension);
           const color = dimensionScore >= 4 ? 'Green' : dimensionScore >= 3 ? 'Yellow' : 'Red';
           
-          const { data: result, error: resultError } = await supabase
+          const { data: result, error: resultError } = await createClient()
             .from('health_check_results')
             .insert({
               user_id: user.id,
@@ -293,7 +314,7 @@ export default function HealthCheckPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           healthCheckResultId: dimensionResults[0].id,
-          responses: questions.map((q, i) => ({
+          responses: questionsData.map((q, i) => ({
             dimension: q.dimension,
             category: q.category,
             score: state.responses[i].score,
@@ -321,7 +342,7 @@ export default function HealthCheckPage() {
   };
 
   const calculateDimensionScore = (responses: AssessmentResponse[], dimension: string) => {
-    const dimensionQuestions = questions.filter(q => q.dimension === dimension);
+    const dimensionQuestions = questionsData.filter(q => q.dimension === dimension);
     const totalScore = dimensionQuestions.reduce((sum, q) => sum + responses[q.id - 1].score, 0);
     return totalScore / dimensionQuestions.length;
   };
@@ -346,16 +367,53 @@ export default function HealthCheckPage() {
 
   const getEstimatedTimeRemaining = () => {
     const answeredCount = state.responses.filter(r => r.answered).length;
-    const remainingQuestions = questions.length - answeredCount;
+    const remainingQuestions = questionsData.length - answeredCount;
     return Math.ceil(remainingQuestions * 1.5); // 1.5 minutes per question
   };
 
   const getCompletionPercentage = () => {
     const answeredCount = state.responses.filter(r => r.answered).length;
-    return Math.round((answeredCount / questions.length) * 100);
+    return Math.round((answeredCount / questionsData.length) * 100);
   };
 
+  // Show loading state while questions are being loaded
+  if (!questionsLoaded) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading health check questions...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state if questions failed to load
+  if (questionsData.length === 0) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8 flex items-center justify-center">
+        <div className="text-center max-w-md mx-auto">
+          <div className="text-red-600 mb-4">
+            <InfoIcon className="h-12 w-12 mx-auto" />
+          </div>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Unable to Load Questions</h2>
+          <p className="text-gray-600 mb-4">
+            {error || 'There was an issue loading the health check questions. Please try refreshing the page.'}
+          </p>
+          <Button onClick={() => window.location.reload()}>
+            Refresh Page
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Update the intro section to show correct question counts
   if (state.mode === 'intro') {
+    const efficiencyCount = questionsData.filter(q => q.dimension === 'Efficiency').length;
+    const effectivenessCount = questionsData.filter(q => q.dimension === 'Effectiveness').length;
+    const excellenceCount = questionsData.filter(q => q.dimension === 'Excellence').length;
+
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8">
         <div className="container mx-auto max-w-4xl px-4">
@@ -380,7 +438,7 @@ export default function HealthCheckPage() {
                 <p className="text-sm text-gray-600 mb-2">
                   Process optimization, resource allocation, and operational excellence
                 </p>
-                <Badge variant="outline" className="text-xs">7 Questions</Badge>
+                <Badge variant="outline" className="text-xs">{efficiencyCount} Questions</Badge>
               </CardContent>
             </Card>
 
@@ -395,7 +453,7 @@ export default function HealthCheckPage() {
                 <p className="text-sm text-gray-600 mb-2">
                   Goal achievement, strategic alignment, and decision-making quality
                 </p>
-                <Badge variant="outline" className="text-xs">7 Questions</Badge>
+                <Badge variant="outline" className="text-xs">{effectivenessCount} Questions</Badge>
               </CardContent>
             </Card>
 
@@ -408,9 +466,9 @@ export default function HealthCheckPage() {
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-gray-600 mb-2">
-                  Innovation culture, continuous learning, and quality standards
+                  Innovation culture, learning mindset, and continuous improvement
                 </p>
-                <Badge variant="outline" className="text-xs">6 Questions</Badge>
+                <Badge variant="outline" className="text-xs">{excellenceCount} Questions</Badge>
               </CardContent>
             </Card>
           </div>
@@ -418,10 +476,7 @@ export default function HealthCheckPage() {
           {/* Assessment Details */}
           <Card className="mb-8">
             <CardHeader>
-              <CardTitle className="flex items-center">
-                <InfoIcon className="h-5 w-5 mr-2" />
-                Assessment Details
-              </CardTitle>
+              <CardTitle>What to Expect</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid gap-4 md:grid-cols-2">
@@ -432,7 +487,7 @@ export default function HealthCheckPage() {
                   </div>
                   <div className="flex items-center">
                     <CheckCircleIcon className="h-4 w-4 mr-2 text-gray-500" />
-                    <span className="text-sm">20 carefully crafted questions</span>
+                    <span className="text-sm">{questionsData.length} research-based questions</span>
                   </div>
                   <div className="flex items-center">
                     <StarIcon className="h-4 w-4 mr-2 text-gray-500" />
@@ -458,34 +513,39 @@ export default function HealthCheckPage() {
           </Card>
 
           {/* Saved Progress Alert */}
-          {state.lastSaved && (
-            <Alert className="mb-6 border-blue-200 bg-blue-50">
+          {state.responses.some(r => r.answered) && (
+            <Alert className="mb-6 bg-yellow-50 border-yellow-200">
               <InfoIcon className="h-4 w-4" />
               <AlertDescription>
-                We found a previous assessment in progress from {state.lastSaved.toLocaleDateString()}. 
-                You can continue where you left off or start fresh.
+                <span className="font-medium">Progress detected:</span> You have {state.responses.filter(r => r.answered).length} saved responses. 
+                <Button variant="link" className="p-0 h-auto ml-1" onClick={resumeAssessment}>
+                  Continue where you left off
+                </Button>
+                {' or '}
+                <Button variant="link" className="p-0 h-auto" onClick={() => {
+                  clearSavedProgress();
+                  setState(prev => ({
+                    ...prev,
+                    responses: Array(questionsData.length).fill(null).map(() => ({ 
+                      score: 0, 
+                      comment: "", 
+                      answered: false 
+                    })),
+                    currentQuestionIndex: 0
+                  }));
+                }}>
+                  start fresh
+                </Button>
               </AlertDescription>
             </Alert>
           )}
 
           {/* Action Buttons */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            {state.lastSaved ? (
-              <>
-                <Button onClick={resumeAssessment} size="lg" className="min-w-[200px]">
-                  <PlayIcon className="h-4 w-4 mr-2" />
-                  Continue Assessment
-                </Button>
-                <Button onClick={startAssessment} variant="outline" size="lg" className="min-w-[200px]">
-                  Start Fresh
-                </Button>
-              </>
-            ) : (
-              <Button onClick={startAssessment} size="lg" className="min-w-[200px]">
-                <PlayIcon className="h-4 w-4 mr-2" />
-                Start Assessment
-              </Button>
-            )}
+          <div className="text-center">
+            <Button onClick={startAssessment} size="lg" className="px-8">
+              <PlayIcon className="h-5 w-5 mr-2" />
+              Begin Health Check
+            </Button>
           </div>
         </div>
       </div>
@@ -494,7 +554,7 @@ export default function HealthCheckPage() {
 
   if (state.mode === 'review') {
     const dimensionSummary = ['Efficiency', 'Effectiveness', 'Excellence'].map(dimension => {
-      const dimensionQuestions = questions.filter(q => q.dimension === dimension);
+      const dimensionQuestions = questionsData.filter(q => q.dimension === dimension);
       const answeredInDimension = dimensionQuestions.filter(q => state.responses[q.id - 1].answered).length;
       const avgScore = dimensionQuestions.length > 0 ? 
         dimensionQuestions.reduce((sum, q) => sum + state.responses[q.id - 1].score, 0) / dimensionQuestions.length : 0;
@@ -546,7 +606,7 @@ export default function HealthCheckPage() {
               <div className="space-y-4 mb-8">
                 <h3 className="text-lg font-semibold">Question Review</h3>
                 <div className="grid gap-2">
-                  {questions.map((question, index) => (
+                  {questionsData.map((question, index) => (
                     <div 
                       key={question.id}
                       className={`flex items-center justify-between p-3 border rounded-lg cursor-pointer hover:bg-gray-50 ${
@@ -613,8 +673,8 @@ export default function HealthCheckPage() {
   }
 
   // Assessment Mode
-  const currentQuestion = questions[state.currentQuestionIndex];
-  const progress = ((state.currentQuestionIndex + 1) / questions.length) * 100;
+  const currentQuestion = questionsData[state.currentQuestionIndex];
+  const progress = ((state.currentQuestionIndex + 1) / questionsData.length) * 100;
   const answeredCount = state.responses.filter(r => r.answered).length;
   const currentResponse = state.responses[state.currentQuestionIndex];
 
@@ -627,7 +687,7 @@ export default function HealthCheckPage() {
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Health Check Assessment</h1>
               <p className="text-gray-600">
-                Question {state.currentQuestionIndex + 1} of {questions.length} • {answeredCount} completed
+                Question {state.currentQuestionIndex + 1} of {questionsData.length} • {answeredCount} completed
               </p>
             </div>
             <div className="text-right">
@@ -697,7 +757,7 @@ export default function HealthCheckPage() {
           <div className="flex items-center space-x-2">
             {/* Quick Navigation Dots */}
             <div className="flex space-x-1">
-              {questions.slice(Math.max(0, state.currentQuestionIndex - 2), state.currentQuestionIndex + 3).map((_, i) => {
+              {questionsData.slice(Math.max(0, state.currentQuestionIndex - 2), state.currentQuestionIndex + 3).map((_, i) => {
                 const actualIndex = Math.max(0, state.currentQuestionIndex - 2) + i;
                 return (
                   <button
@@ -717,7 +777,7 @@ export default function HealthCheckPage() {
             </div>
           </div>
 
-          {state.currentQuestionIndex < questions.length - 1 ? (
+          {state.currentQuestionIndex < questionsData.length - 1 ? (
             <Button
               onClick={handleNext}
               disabled={!currentResponse.answered}

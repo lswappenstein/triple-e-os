@@ -1,4 +1,4 @@
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
 // import { Database } from '@/lib/database.types'; // Commented out due to missing module
@@ -52,9 +52,29 @@ interface UserQuickWin {
   last_updated: string;
 }
 
+interface QuickWinTemplate {
+  title: string;
+  description: string;
+  impact_level: string;
+  effort_level: string;
+  timeframe: string;
+  archetype_name: string;
+}
+
 export async function GET() {
   try {
-    const supabase = createRouteHandlerClient({ cookies });
+    const cookieStore = await cookies();
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name: string) {
+            return cookieStore.get(name)?.value;
+          },
+        },
+      }
+    );
     const { data: { user } } = await supabase.auth.getUser();
     
     if (!user) {
@@ -98,22 +118,43 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient({ cookies });
-    const { data: { user } } = await supabase.auth.getUser();
+    console.log('🔍 Archetype API: Starting POST request');
+    const cookieStore = await cookies();
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name: string) {
+            return cookieStore.get(name)?.value;
+          },
+        },
+      }
+    );
+    
+    console.log('🔍 Getting user...');
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    
+    console.log('🔍 Auth result:', { user: user?.id, email: user?.email, authError: authError?.message });
     
     if (!user) {
+      console.log('❌ No user found, returning 401');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // Parse request body but only extract what we need
-    await request.json();
+    const body = await request.json();
+    console.log('🔍 Request body keys:', Object.keys(body));
 
     // Use the database function to detect archetypes
+    console.log('🔍 Calling detect_archetypes_for_user function...');
     const { data: detectedArchetypes, error: detectionError } = await supabase
       .rpc('detect_archetypes_for_user', { p_user_id: user.id });
 
+    console.log('🔍 Function result:', { data: detectedArchetypes, error: detectionError });
+
     if (detectionError) {
-      console.error('Error detecting archetypes:', detectionError);
+      console.error('❌ Error detecting archetypes:', detectionError);
       return NextResponse.json({ error: 'Failed to detect archetypes' }, { status: 500 });
     }
 
@@ -143,33 +184,58 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Failed to save archetypes' }, { status: 500 });
       }
 
-      // Generate system quick wins for detected archetypes
-      const quickWinInserts: QuickWinInsert[] = typedArchetypes.map((archetype: DetectedArchetype) => ({
-        user_id: user.id,
-        title: `Address ${archetype.archetype_name}`,
-        description: `Focus on improving ${archetype.source_dimension.toLowerCase()} to address the ${archetype.archetype_name} pattern.`,
-        source: 'system' as const,
-        archetype: archetype.archetype_name,
-        dimension: archetype.source_dimension,
-        impact_level: 'High' as const,
-        status: 'To Do' as const,
-      }));
+      // Generate quick wins using the enhanced template system
+      const archetypeNames = typedArchetypes.map(a => a.archetype_name);
+      console.log('🎯 Generating quick wins for archetypes:', archetypeNames);
+      
+      // Get quick win templates for detected archetypes
+      const { data: quickWinTemplates, error: templatesError } = await supabase
+        .from('quick_win_templates')
+        .select('*')
+        .in('archetype_name', archetypeNames);
 
-      // Clear existing system quick wins for this user
-      await supabase
-        .from('quick_wins')
-        .delete()
-        .eq('user_id', user.id)
-        .eq('source', 'system');
+      console.log('📋 Found quick win templates:', quickWinTemplates?.length || 0);
 
-      // Insert new system quick wins
-      const { error: quickWinError } = await supabase
-        .from('quick_wins')
-        .insert(quickWinInserts);
+      if (templatesError) {
+        console.error('Error fetching quick win templates:', templatesError);
+      } else if (quickWinTemplates && quickWinTemplates.length > 0) {
+        // Convert templates to quick win inserts
+        const quickWinInserts: QuickWinInsert[] = quickWinTemplates.map((template: QuickWinTemplate) => {
+          const archetype = typedArchetypes.find(a => a.archetype_name === template.archetype_name);
+          return {
+            user_id: user.id,
+            title: template.title,
+            description: template.description,
+            source: 'system' as const,
+            archetype: template.archetype_name,
+            dimension: archetype?.source_dimension || 'Efficiency',
+            impact_level: template.impact_level as 'Low' | 'Medium' | 'High',
+            status: 'To Do' as const,
+          };
+        });
 
-      if (quickWinError) {
-        console.error('Error saving quick wins:', quickWinError);
-        // Don't fail the request if quick wins fail to save
+        console.log('🗑️ Clearing existing system quick wins for user:', user.id);
+        // Clear existing system quick wins for this user
+        const { error: deleteError } = await supabase
+          .from('quick_wins')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('source', 'system');
+
+        console.log('🗑️ Delete result:', { deleteError });
+
+        console.log('➕ Inserting new quick wins:', quickWinInserts.length);
+        // Insert new research-based quick wins
+        const { error: quickWinError } = await supabase
+          .from('quick_wins')
+          .insert(quickWinInserts);
+
+        console.log('➕ Insert result:', { quickWinError });
+
+        if (quickWinError) {
+          console.error('Error saving quick wins:', quickWinError);
+          // Don't fail the request if quick wins fail to save
+        }
       }
     }
 
@@ -177,7 +243,7 @@ export async function POST(request: NextRequest) {
       success: true,
       archetypes: typedArchetypes || [],
       message: (typedArchetypes && typedArchetypes.length > 0)
-        ? `Detected ${typedArchetypes.length} archetype(s)` 
+        ? `Detected ${typedArchetypes.length} archetype(s) and generated ${typedArchetypes.length * 3} research-based quick wins` 
         : 'No archetypes detected'
     });
 

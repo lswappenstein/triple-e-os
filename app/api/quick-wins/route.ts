@@ -18,116 +18,116 @@ export async function POST(req: Request) {
     // No body or invalid JSON, continue with generation
   }
 
-  // Fetch latest health check results (per dimension)
-  const { data: results, error: resultsError } = await supabase
-    .from('health_check_results')
+  logs.push('Starting research-based quick wins generation...');
+
+  // First, detect archetypes for the user
+  const { data: detectedArchetypes, error: detectionError } = await supabase
+    .rpc('detect_archetypes_for_user', { p_user_id: user.id });
+
+  if (detectionError) {
+    logs.push('Error detecting archetypes: ' + detectionError.message);
+    return NextResponse.json({ error: detectionError.message, logs }, { status: 500 });
+  }
+
+  logs.push(`Detected ${detectedArchetypes?.length || 0} archetypes`);
+
+  if (!detectedArchetypes || detectedArchetypes.length === 0) {
+    logs.push('No archetypes detected, generating fallback quick wins.');
+    const fallbackQuickWins = [
+      {
+        user_id: user.id,
+        title: 'Start a Weekly Team Huddle',
+        description: 'Hold a 15-minute meeting every Monday to align on priorities and blockers.',
+        source: 'system',
+        archetype: null,
+        dimension: 'Efficiency',
+        impact_level: 'High',
+        status: 'To Do',
+        notes: '',
+      },
+      {
+        user_id: user.id,
+        title: 'Implement One-on-One Check-ins',
+        description: 'Schedule regular 30-minute one-on-one meetings with team members to discuss progress and challenges.',
+        source: 'system',
+        archetype: null,
+        dimension: 'Excellence',
+        impact_level: 'High',
+        status: 'To Do',
+        notes: '',
+      }
+    ];
+
+    // Insert fallback quick wins
+    const { error: insertError } = await supabase.from('quick_wins').insert(fallbackQuickWins);
+    if (insertError) {
+      logs.push('Error inserting fallback quick wins: ' + insertError.message);
+      return NextResponse.json({ error: insertError.message, logs }, { status: 500 });
+    }
+
+    logs.push('Fallback quick wins inserted successfully.');
+    return NextResponse.json({ success: true, quickWins: fallbackQuickWins, logs });
+  }
+
+  // Get quick win templates for detected archetypes
+  const archetypeNames = detectedArchetypes.map((a: { archetype_name: string }) => a.archetype_name);
+  const { data: quickWinTemplates, error: templatesError } = await supabase
+    .from('quick_win_templates')
     .select('*')
+    .in('archetype_name', archetypeNames);
+
+  if (templatesError) {
+    logs.push('Error fetching quick win templates: ' + templatesError.message);
+    return NextResponse.json({ error: templatesError.message, logs }, { status: 500 });
+  }
+
+  logs.push(`Found ${quickWinTemplates?.length || 0} quick win templates`);
+
+  if (!quickWinTemplates || quickWinTemplates.length === 0) {
+    logs.push('No quick win templates found for detected archetypes.');
+    return NextResponse.json({ error: 'No quick win templates available', logs }, { status: 404 });
+  }
+
+  // Convert templates to quick win inserts
+  const quickWins = quickWinTemplates.map((template: {
+    title: string;
+    description: string;
+    impact_level: string;
+    archetype_name: string;
+  }) => {
+    const archetype = detectedArchetypes.find((a: { archetype_name: string; source_dimension: string }) => 
+      a.archetype_name === template.archetype_name
+    );
+    return {
+      user_id: user.id,
+      title: template.title,
+      description: template.description,
+      source: 'system',
+      archetype: template.archetype_name,
+      dimension: archetype?.source_dimension || 'Efficiency',
+      impact_level: template.impact_level,
+      status: 'To Do',
+      notes: '',
+    };
+  });
+
+  logs.push(`Generated ${quickWins.length} research-based quick wins`);
+
+  // Clear existing system quick wins for this user
+  await supabase
+    .from('quick_wins')
+    .delete()
     .eq('user_id', user.id)
-    .order('created_at', { ascending: false });
-  if (resultsError) {
-    logs.push('Error fetching health_check_results: ' + resultsError.message);
-    return NextResponse.json({ error: resultsError.message, logs }, { status: 500 });
-  }
-  logs.push(`Fetched ${results?.length || 0} health_check_results`);
+    .eq('source', 'system');
 
-  // Fetch latest archetypes
-  const { data: archetypes, error: archetypesError } = await supabase
-    .from('archetypes')
-    .select('*')
-    .eq('user_id', user.id)
-    .order('created_at', { ascending: false });
-  if (archetypesError) {
-    logs.push('Error fetching archetypes: ' + archetypesError.message);
-    return NextResponse.json({ error: archetypesError.message, logs }, { status: 500 });
-  }
-  logs.push(`Fetched ${archetypes?.length || 0} archetypes`);
-
-  // Example mapping logic: pick the lowest scoring dimension and top archetype
-  const lowResults = [...(results || [])].sort((a, b) => (a.average_score ?? 0) - (b.average_score ?? 0));
-  const topArchetypes = (archetypes || []).slice(0, 2);
-
-  // Example quick wins (replace with your real mapping logic)
-  const quickWins = [];
-  if (lowResults[0]) {
-    quickWins.push({
-      user_id: user.id,
-      title: `Improve ${lowResults[0].dimension} processes`,
-      description: `Focus on improving ${lowResults[0].dimension.toLowerCase()} based on your recent health check results.`,
-      source: 'system',
-      archetype: topArchetypes[0]?.archetype_name || null,
-      dimension: lowResults[0].dimension,
-      impact_level: 'High',
-      status: 'To Do',
-      notes: '',
-    });
-  }
-  if (topArchetypes[0]) {
-    quickWins.push({
-      user_id: user.id,
-      title: `Address ${topArchetypes[0].archetype_name} pattern`,
-      description: topArchetypes[0].insight,
-      source: 'system',
-      archetype: topArchetypes[0].archetype_name,
-      dimension: topArchetypes[0].source_dimension,
-      impact_level: 'High',
-      status: 'To Do',
-      notes: '',
-    });
-  }
-  if (lowResults[1]) {
-    quickWins.push({
-      user_id: user.id,
-      title: `Boost ${lowResults[1].dimension} effectiveness`,
-      description: `Take action to improve ${lowResults[1].dimension.toLowerCase()} in your organization.`,
-      source: 'system',
-      archetype: topArchetypes[1]?.archetype_name || null,
-      dimension: lowResults[1].dimension,
-      impact_level: 'Medium',
-      status: 'To Do',
-      notes: '',
-    });
-  }
-  // Add up to 5 quick wins
-  while (quickWins.length < 3 && lowResults[quickWins.length]) {
-    quickWins.push({
-      user_id: user.id,
-      title: `Enhance ${lowResults[quickWins.length].dimension} practices`,
-      description: `Work on ${lowResults[quickWins.length].dimension.toLowerCase()} for better results.`,
-      source: 'system',
-      archetype: null,
-      dimension: lowResults[quickWins.length].dimension,
-      impact_level: 'Medium',
-      status: 'To Do',
-      notes: '',
-    });
-  }
-
-  // Fallback: if no quick wins, generate a generic one for demo/testing
-  if (quickWins.length === 0) {
-    logs.push('No data found, generating fallback quick win.');
-    quickWins.push({
-      user_id: user.id,
-      title: 'Start a Weekly Team Huddle',
-      description: 'Hold a 15-minute meeting every Monday to align on priorities and blockers.',
-      source: 'system',
-      archetype: null,
-      dimension: 'Efficiency',
-      impact_level: 'High',
-      status: 'To Do',
-      notes: '',
-    });
-  }
-
-  logs.push(`Generated ${quickWins.length} quick wins`);
-
-  // Insert quick wins
+  // Insert new research-based quick wins
   const { error: insertError } = await supabase.from('quick_wins').insert(quickWins);
   if (insertError) {
     logs.push('Error inserting quick wins: ' + insertError.message);
     return NextResponse.json({ error: insertError.message, logs }, { status: 500 });
   }
 
-  logs.push('Quick wins inserted successfully.');
+  logs.push('Research-based quick wins inserted successfully.');
   return NextResponse.json({ success: true, quickWins, logs });
 }
 
