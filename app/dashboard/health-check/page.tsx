@@ -331,8 +331,8 @@ export default function HealthCheckPage() {
       // Clear saved progress on successful submission
       clearSavedProgress();
 
-      // Navigate to results
-      router.push('/dashboard/archetypes');
+      // Navigate to results page to show user their responses and scores
+      router.push('/dashboard/health-check/results');
     } catch (err: any) {
       console.error('Error submitting health check:', err);
       setError(err?.message || 'Failed to submit health check. Please try again.');

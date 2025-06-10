@@ -429,8 +429,18 @@ export default function DashboardPage() {
                 variant="ghost"
                 size="sm"
               >
-                <a href="/dashboard/health-check" className="flex items-center">
-                  View Report <ChevronRightIcon className="h-4 w-4 ml-1" />
+                <a 
+                  href={
+                    dashboardData.healthCheckSummary && dashboardData.healthCheckSummary.length > 0 
+                      ? "/dashboard/health-check/results" 
+                      : "/dashboard/health-check"
+                  } 
+                  className="flex items-center"
+                >
+                  {dashboardData.healthCheckSummary && dashboardData.healthCheckSummary.length > 0 
+                    ? "View Report" 
+                    : "Take Assessment"
+                  } <ChevronRightIcon className="h-4 w-4 ml-1" />
                 </a>
               </Button>
             </CardTitle>
